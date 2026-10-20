@@ -1,6 +1,6 @@
 
 ####Programs for the Tennis Scoring Paper
-####October 2025
+####October 2026
 
 
 ###Game Tie-Break
@@ -163,8 +163,11 @@ Theta_ST <- function(pA=.5,pB=.5,K=7)
     }
   }
   
-  sttprob = Theta_STT(pA,pB)
-  val1 = val1 + val3*sttprob^Aserving*(1-sttprob)^(1-Aserving)
+  ####Below portion corrected on Sept 29, 2026
+  sttprobA = Theta_STT(pA,pB)
+  sttprobB = Theta_STT(pB,pA)
+  val1 = val1 + val3*sttprobA^Aserving*(1-sttprobB)^(1-Aserving)
+  ####
   
   return(val1)
   
@@ -255,16 +258,18 @@ contour_Theta_S <- function(paseq=seq(.01,.99,.01),pbseq=paseq,K=7)
   abline(a=0,b=1,col="red")
 }
 
+
 ####Match Probability
 ####
-Theta_M <- function(pA=.5,pB=.5,K0=7,K1=10,L=5)
+Theta_M <- function(pA=.5,pB=.5,K0=7,K1=10,Q=2)
 {
+  L = 2*Q + 1 ###Best-of-L match
+  ####argument list in function changed from L=5 to Q=2, sept 30, 2026
+  
   setA0 = Theta_S(pA,pB,K0)
   setB0 = Theta_S(pB,pA,K0)
   setA1 = Theta_S(pA,pB,K1)
   setB1 = Theta_S(pB,pA,K1)
-  
-  Q = floor(L/2)
   
   val1 = 0
   
@@ -276,11 +281,19 @@ Theta_M <- function(pA=.5,pB=.5,K0=7,K1=10,L=5)
     tA = numS$tA
     tB = numS$tB
     
-    for(j in 0:Q) {
-      val2 = val2 + choose(tA,j)*choose(tB,Q-j)*setA0^j*(1-setA0)^(tA-j)*(1-setB0)^(Q-j)*setB0^(tB-(Q-j))
+    for(j in 0:Q) { ####this if statement added October 5, 2026
+    	if((tA < j) || (tB < (Q-j))) {addend = 0}
+    	else {addend = choose(tA,j)*choose(tB,Q-j)*setA0^j*(1-setA0)^(tA-j)*(1-setB0)^(Q-j)*setB0^(tB-(Q-j))}
+
+      val2 = val2 + addend
+      #      print(c(j,tA,tB,addend))
     }
     
+    #print(val2)
+    
     val2 = val2*setA0^JA*(1-setB0)^(1-JA)
+    
+    #print(val2)
     
     val1 = val1 + val2
   }
@@ -288,8 +301,12 @@ Theta_M <- function(pA=.5,pB=.5,K0=7,K1=10,L=5)
   pQQ = 0
   for(j in 0:Q) {
     pQQ = pQQ + (choose(Q,j))^2 * (setA0*setB0)^j*((1-setA0)*(1-setB0))^(Q-j)
+    # print(c(j,pQQ))
   }
   
+  # print(pQQ)
+  
+  JA = whoServes(2*Q+1)    ####Added October 16, 2026
   val1 = val1 + pQQ*setA1^JA*(1-setB1)^(1-JA)
   
   return(val1)
@@ -297,13 +314,16 @@ Theta_M <- function(pA=.5,pB=.5,K0=7,K1=10,L=5)
 
 ###Creates a contour plot for the match
 ###
-contour_Theta_M <- function(paseq=seq(.01,.99,.01),pbseq=paseq,K0=7,K1=10,L=5)
+contour_Theta_M <- function(paseq=seq(.01,.99,.01),pbseq=paseq,K0=7,K1=10,Q=2)
 {
   len = length(paseq)
   valmat = matrix(0,len,len)
+  
+  L = 2*Q + 1
+  
   for(i in 1:len)
   {for(j in 1:len)
-  {valmat[i,j] = Theta_M(paseq[i],paseq[j],K0=K0,K1=K1,L=L)}
+  {valmat[i,j] = Theta_M(paseq[i],paseq[j],K0=K0,K1=K1,Q=Q)}
   }
   contour(paseq,pbseq,valmat,xlab="pA",ylab="pB",main="Contour Plot for Match",levels=seq(.1,.9,.1))
   abline(h=.5,col="gray")
@@ -959,6 +979,8 @@ SetST_Statistics <- function(pA,pB,K)
   }
   probs = c(probs,JPMFWAWB(K-1,K-1,pA,pB,K))
   
+  #print(data.frame(nval,probs))
+  
   meanST = sum(nval*probs)
   varST = 4*(1-(pA*qB+qA*pB))/((pA*qB+qA*pB)^2)*probs[K]
   varST = varST + (sum(nval^2*probs) - meanST^2)
@@ -1452,13 +1474,16 @@ f_inner1_STT <- function(pA,pB,alpha1,beta1,alpha2,beta2)
 	return(val)
 }
 
+
+####Correction made Sept 29 2026 (Theta_ST replaced by Theta_STT)
+####
 f_inner2_STT <- function(pA,pB,alpha1,beta1,alpha2,beta2)
 {
 	len = length(pA)
 	val = rep(0,len)
 	for(i in 1:len) {
 		pAtemp = pA[i]
-		val[i] = (2*Theta_ST(pAtemp,pB) - 1)*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
+		val[i] = (2*Theta_STT(pAtemp,pB) - 1)*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
 		}
 	return(val)
 }
@@ -1471,20 +1496,57 @@ Effi_Set_STT<- function(alpha1=2,beta1=1,alpha2=2,beta2=1)
 
 ####Efficiency of Match System
 
-f_outer_Match <- function(pB,K0,K1,Q,alpha1=2,beta1=1,alpha2=2,beta2=1)
+f_outer_Match <- function(pB,K0,K1,Q,alpha1=2,beta1=1,alpha2=2,beta2=1,lower=.0001,upper=.9999)
 {
 	len = length(pB)
 	val = rep(0,len)
 	for(i in 1:len) {
 		pBtemp = pB[i]
-		val[i] =  integrate(f_inner1_Match,0.0001,pBtemp,pB=pBtemp,K0=K0,K1=K1,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value +
- integrate(f_inner2_Match,pBtemp,.9999,pB=pBtemp,K0=K0,K1=K1,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value		
+		
+		val[i] = integrate(f=f_inner_Match,lower=lower,upper=upper,pB=pBtemp,K0=K0,K1=K1,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+#		print(c(i,pBtemp,val[i]))
+		
+#		valint1 = integrate(f_inner1_Match_Clean,0.0001,pBtemp,pB=pBtemp,K0=K0,K1=K1,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+		
+#		print(c(pBtemp,valint1))
+		
+#		valint2 = integrate(f_inner2_Match_Clean,pBtemp,0.9999,pB=pBtemp,K0=K0,K1=K1,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+		
+#		print(c(pBtemp,valint2))
+		
+#		print(c(pBtemp,valint1,valint2))
+		
+#		val[i] =  valint1 + valint2		
 	}
 	return(val)
 }
 
+###Added October 5, 2026
+###
+f_inner_Match <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
+{
+	len = length(pA)
+	val = rep(0,len)
+	
+		for(i in 1:len) {
+		pAtemp = pA[i]
+		ThetaM = Theta_M(pAtemp,pB,K0,K1,Q)
+		pAtempLESSpB = as.numeric(pAtemp <= pB)
+		valtemp = (1 - 2*ThetaM)*pAtempLESSpB + (2*ThetaM - 1)*(1 - pAtempLESSpB)
+		val[i] = valtemp*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
+#		print(c(pAtemp,pB,ThetaM,valtemp,dbeta(pAtemp,alpha1,beta1),dbeta(pB,alpha2,beta2),val[i]))
+		}
+		
+	return(val)
+}
+#####
+
+
+
 f_inner1_Match <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
 {
+  L = 2*Q + 1 ###Corrected 9_29_2026 (Q replaced by L in Theta_M)
+  
 	len = length(pA)
 	val = rep(0,len)
 	for(i in 1:len) {
@@ -1494,14 +1556,38 @@ f_inner1_Match <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
 	return(val)
 }
 
+###Clean f_inner1_Match
+###
+f_inner1_Match_Clean <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
+{
+	val = f_inner1_Match(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
+	val[!is.finite(val)] = 0
+	return(val)
+}
+
 f_inner2_Match <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
 {
+  L = 2*Q + 1 ###Corrected 9_29_2026 (Q replaced by L in Theta_M)
 	len = length(pA)
 	val = rep(0,len)
+	
+	print(pA)
+	
 	for(i in 1:len) {
 		pAtemp = pA[i]
 		val[i] = (2*Theta_M(pAtemp,pB,K0,K1,Q) - 1)*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
+		
+		print(c(i,pAtemp,pB,val[i]))
 		}
+	return(val)
+}
+
+###Clean f_inner2_Match
+###
+f_inner2_Match_Clean <- function(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
+{
+	val = f_inner2_Match(pA,pB,K0,K1,Q,alpha1,beta1,alpha2,beta2)
+	val[!is.finite(val)] = 0
 	return(val)
 }
 
@@ -1520,8 +1606,9 @@ f_outer_BofK2 <- function(pB,Q,alpha1=2,beta1=1,alpha2=2,beta2=1)
 	val = rep(0,len)
 	for(i in 1:len) {
 		pBtemp = pB[i]
-		val[i] =  integrate(f_inner1_BofK2,0.0001,pBtemp,pB=pBtemp,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value +
- integrate(f_inner2_BofK2,pBtemp,.9999,pB=pBtemp,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value		
+		valint1 = integrate(f_inner1_BofK2,0.0001,pBtemp,pB=pBtemp,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+		valint2 = integrate(f_inner2_BofK2,pBtemp,.9999,pB=pBtemp,Q=Q,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+		val[i] =  valint1 + valint2		
 	}
 	return(val)
 }
@@ -1638,6 +1725,50 @@ Effi_BofK3<- function(Q=13,alpha1=2,beta1=1,alpha2=2,beta2=1)
 	return(val)
 }
 
+####Efficiency of BOfK4 System
+####Added October 8, 2026
+
+f_outer_BofK4 <- function(pB,Q,K=10,alpha1=2,beta1=1,alpha2=2,beta2=1)
+{
+	len = length(pB)
+	val = rep(0,len)
+	for(i in 1:len) {
+		pBtemp = pB[i]
+		val[i] =  integrate(f_inner1_BofK4,0.0001,pBtemp,pB=pBtemp,Q=Q,K=K,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value +
+ integrate(f_inner2_BofK4,pBtemp,.9999,pB=pBtemp,Q=Q,K=K,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value		
+	}
+	return(val)
+}
+
+f_inner1_BofK4 <- function(pA,pB,Q,K=10,alpha1,beta1,alpha2,beta2)
+{
+	len = length(pA)
+	val = rep(0,len)
+	for(i in 1:len) {
+		pAtemp = pA[i]
+		val[i] = (1-2*Theta_BofK4(pAtemp,pB,Q,K))*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
+		}
+	return(val)
+}
+
+f_inner2_BofK4 <- function(pA,pB,Q,K=10,alpha1,beta1,alpha2,beta2)
+{
+	len = length(pA)
+	val = rep(0,len)
+	for(i in 1:len) {
+		pAtemp = pA[i]
+		val[i] = (2*Theta_BofK4(pAtemp,pB,Q,K) - 1)*dbeta(pAtemp,alpha1,beta1)*dbeta(pB,alpha2,beta2)
+		}
+	return(val)
+}
+
+
+Effi_BofK4<- function(Q=13,K=10,alpha1=2,beta1=1,alpha2=2,beta2=1)
+{
+	val = integrate(f_outer_BofK4,0.0001,.9999,Q=Q,K=K,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)$value
+	return(val)
+}
+
 
 
 
@@ -1707,12 +1838,27 @@ Theta_BofK3 <- function(pA=.5,pB=.5,L=20)
 	
 }
 
+###Added: October 8, 2026
+###Best of 2L Games with an ST with points tie-breaker
+
+Theta_BofK4 <- function(pA=.5,pB=.5,L=30,K=10)
+{
+	thetaGA = Theta_G(pA)
+	thetaGB = Theta_G(pB)
+	
+	val = 1-CDFTwoBinoms(L,L,thetaGA,L,1-thetaGB) + PMFTwoBinoms(L,L,thetaGA,L,1-thetaGB)*Theta_ST(pA,pB,K)
+	
+	return(val)
+	
+}
+
 
 Effi_BestOfK <- function(Lvec=5:50,alpha1=2,beta1=1,alpha2=2,beta2=1)
 {
 	eff1 = NULL
 	eff2 = NULL
 	eff3 = NULL
+	
 	for(L in Lvec) {
 		e1 = Effi_BofK1(Q=L,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)
 		e2 = Effi_BofK2(Q=L,alpha1=alpha1,beta1=beta1,alpha2=alpha2,beta2=beta2)
@@ -1788,7 +1934,7 @@ JPMF_GAGB_BOKG <- function(a,b,pA,pB,L)
 		numS = numServesS(a+b)
 		tA = numS$tA
 		tB = numS$tB
-		val = PMFTwoBinoms(L,tA,thetaGA,tB,1-thetaGB)
+		val = PMFTwoBinoms(a,tA,thetaGA,tB,1-thetaGB) ###Corrected Oct 4, 2026 (had L instead of a prior)
 	}
 	
 	return(val)
@@ -1809,8 +1955,9 @@ Theta_BOKG <- function(pA,pB,L)
 	val1 = val + tieprob*.5*(thetaGA + (1-thetaGB))
 	val2 = val + tieprob*Theta_STT(thetaGA,thetaGB)
 	val3 = val + tieprob*Theta_STT(pA,pB)
+	val4 = val + tieprob*Theta_ST(pA,pB,10) ###added: Oct 8, 2026
 
-	return(list(pA=pA,pB=pB,L=L,theta_GOBK1=val1,theta_GOBK2=val2,theta_GOBK3=val3))
+	return(list(pA=pA,pB=pB,L=L,theta_GOBK1=val1,theta_GOBK2=val2,theta_GOBK3=val3,theta_GOBK4=val4))
 	
 	return(val)
 }
@@ -1828,7 +1975,7 @@ Mean_Vari_NSTT <- function(pA,pB)
 }
 
 
-###Meana dn Variance of NG
+###Mean and Variance of NG
 Mean_Vari_Game <- function(p)
 {
 	out = Game_Statistics(p)
@@ -1870,24 +2017,39 @@ Mean_Vari_BOKG <- function(pA=.5,pB=.5,L=10)
 	
 	###Adjust values when tied under the three systems
 	###System1 (SD)
+	####Corrections made here on Sept 29 2026 (2*+1 changed to 2*L+1 in RHS)
+	####
 	cmeanvec1 = cmeanvec
-	cmeanvec1[2*L+1] = cmeanvec1[2*+1] + .5*(GameA_mean + GameB_mean)
+	cmeanvec1[2*L+1] = cmeanvec1[2*L+1] + .5*(GameA_mean + GameB_mean)
 	cvarivec1 = cvarivec
-	cvarivec1[2*L+1] = cvarivec1[2*+1] + .5*(GameA_vari + GameB_vari)
+	cvarivec1[2*L+1] = cvarivec1[2*L+1] + .5*(GameA_vari + GameB_vari) + (1/4)*(GameA_mean - GameB_mean)^2 ###Corrected Oct 4, 2026
 	
 	####System2 (STTG)
+	####Corrected October 4, 2026
 	out2_NSTT = Mean_Vari_NSTT(thetaGA,thetaGB)
+	nu = 1/(thetaGA*(1-thetaGB) + (1-thetaGA)*thetaGB) ###this is part of the correction
 	cmeanvec2 = cmeanvec
-	cmeanvec2[2*L+1] = cmeanvec2[2*+1] + out2_NSTT$mean_NSTT
+	##cmeanvec2[2*L+1] = cmeanvec2[2*L+1] + out2_NSTT$mean_NSTT
+	cmeanvec2[2*L+1] = cmeanvec2[2*L+1] + nu*(GameA_mean + GameB_mean) ###CORRECTED
 	cvarivec2 = cvarivec
-	cvarivec2[2*L+1] = cvarivec2[2*+1] + out2_NSTT$vari_NSTT
+	##cvarivec2[2*L+1] = cvarivec2[2*L+1] + out2_NSTT$vari_NSTT
+	cvarivec2[2*L+1] = cvarivec2[2*L+1] + nu*(GameA_vari + GameB_vari) + nu*(nu-1)*(GameA_mean + GameB_mean)^2 ###CORRECTED
 	
 	####System3 (STTP)
+
 	out3_NSTT = Mean_Vari_NSTT(pA,pB)
 	cmeanvec3 = cmeanvec
-	cmeanvec3[2*L+1] = cmeanvec3[2*+1] + out3_NSTT$mean_NSTT
+	cmeanvec3[2*L+1] = cmeanvec3[2*L+1] + out3_NSTT$mean_NSTT
 	cvarivec3 = cvarivec
-	cvarivec3[2*L+1] = cvarivec3[2*+1] + out3_NSTT$vari_NSTT
+	cvarivec3[2*L+1] = cvarivec3[2*L+1] + out3_NSTT$vari_NSTT
+	
+	####System4 (STP)
+
+	out4_NST = SetST_Statistics(pA,pB,10)
+	cmeanvec4 = cmeanvec
+	cmeanvec4[2*L+1] = cmeanvec4[2*L+1] + out4_NST$meanST
+	cvarivec4 = cvarivec
+	cvarivec4[2*L+1] = cvarivec4[2*L+1] + out4_NST$varST
 	
 	####Overall Probabilities of A winning
 	BOKG_Probs = Theta_BOKG(pA,pB,L)
@@ -1896,8 +2058,12 @@ Mean_Vari_BOKG <- function(pA=.5,pB=.5,L=10)
 	BOKG1 = Iter_Mean_Vari(probvec,cmeanvec1,cvarivec1)
 	BOKG2 = Iter_Mean_Vari(probvec,cmeanvec2,cvarivec2)
 	BOKG3 = Iter_Mean_Vari(probvec,cmeanvec3,cvarivec3)
+	BOKG4 = Iter_Mean_Vari(probvec,cmeanvec4,cvarivec4)
+	
+##	print(data.frame(avec=avec,bvec=bvec,probvec=probvec,cmeanvec2=cmeanvec2,cvarivec2=cvarivec2))
+	
 
-return(list(pA=pA,pB=pB,L=L,avec=avec,bvec,probvec=probvec,BOKG_Probs=BOKG_Probs,BOKG1=BOKG1,BOKG2=BOKG2,BOKG3=BOKG3))
+return(list(pA=pA,pB=pB,L=L,avec=avec,bvec,probvec=probvec,BOKG_Probs=BOKG_Probs,BOKG1=BOKG1,BOKG2=BOKG2,BOKG3=BOKG3,BOKG4=BOKG4))
 
 }
 
@@ -1931,6 +2097,8 @@ Compare_Match_BOKG <- function(pA=.5,pB=.5,L=10,K0=7,K1=10,Q=2)
   
   return(list(summ_Match=summ_Match,summ_BOKG=summ_BOKG,Diff_Probs=Diff_Probs,Ratio_Probs=Ratio_Probs,Ratio_Means=Ratio_Means,Ratio_Stds=Ratio_Stds))
 }
+
+
 
 Contour_Compare_Match_BOKG <- function(pAvec=seq(.01,.99,.01),pBvec=seq(.01,.99,.01),L=10,K0=7,K1=10,Q=2,nlevs=30)
 {
@@ -2036,10 +2204,55 @@ Big_Table_Compare_Match_BOKG <- function(pAvec=c(.3,.5,.7),pBvec=c(.3,.5,.7),Lve
   return(Big_Table)
 }
 
+####Creating Comparative Table
+####
+Compare_Match_BOKG4_Table <- function(pA=.5,pB=.5,Lvec=c(5,15,22,29),K0=7,K1=10,Q=2)
+{
+  
+  Tab_Results = NULL
+  
+  pAvec = rep(pA,3)
+  pBvec = rep(pB,3)
+  Tab_Results = cbind(Tab_Results,pAvec,pBvec)
+  
+  names_col = c("pA","pB")
+  
+  out_Match = Match_Statistics(pA=pA,pB=pB,K0=K0,K1=K1,Q=Q)
+  summ_Match = round(c(out_Match$Awins_all,out_Match$meanM,out_Match$stdM),4)
+  names(summ_Match) = c("Prob A wins","MeanPts","StdPts")
+  Tab_Results = cbind(Tab_Results,summ_Match)
+  names_col = c(names_col,"Match")
+  
+  for(L in Lvec) {
+  out_BOKG = Mean_Vari_BOKG(pA=pA,pB=pB,L=L)
+  summ_BOKG = round(c(out_BOKG$BOKG_Probs$theta_GOBK4,(unlist(out_BOKG$BOKG4)))[-3],4)
+  names(summ_BOKG) = c("Prob A wins","MeanPts","StdPts")
+  Tab_Results = cbind(Tab_Results,summ_BOKG)
+  names_col = c(names_col,paste("BOKG4::",L))
+}
+  
+  colnames(Tab_Results) = names_col
+  return(Tab_Results)
+}
+
+Big_Table_Compare_Match_BOKG4 <- function(pAvec=c(.3,.5,.7),pBvec=c(.3,.5,.7),Lvec=c(5,15,22,29),K0=7,K1=10,Q=2)
+{
+  Big_Table = NULL
+  for(pA in pAvec) {
+    for(pB in pBvec) {
+      Tab_Results = Compare_Match_BOKG4_Table(pA,pB,Lvec,K0,K1,Q)
+      Big_Table = rbind(Big_Table,Tab_Results)
+    }
+  }
+  
+  return(Big_Table)
+}
+
+
 
 ####Replotting for the Set ST Statistics
 ####
-Plot_NST_Statistics <- function(pA = seq(.01,.99,.01),pB = seq(0.01,.99,.01),K=7)
+Plot_NST_Statistics <- function(pA = seq(.01,.99,.01),pB = seq(0.01,.99,.01),K=7,xlabin=paste("p=pA, pB=p"))
 {
   len = length(pA)
   meanvec = rep(0,len)
@@ -2052,7 +2265,654 @@ Plot_NST_Statistics <- function(pA = seq(.01,.99,.01),pB = seq(0.01,.99,.01),K=7
   }
   
   close.screen(all.screens=T)
-  plot(pA,meanvec,type="l",lwd=4,xlab="p = pA, pB = p",ylab = "Mean Number of Points",  main= "Plot of Mean of NST",col="blue")
+  plot(pA,meanvec,type="l",lwd=4,xlab=xlabin,ylab = "Mean Number of Points",  main= "Plot of Mean of NST",col="blue")
   scan()
-  plot(pA,stdvec,type="l",lwd=4,xlab="p = pA, pB = p",ylab = "StdDev of Number of Points",  main= "Plot of Standard Deviation of NST",col="blue")
+  plot(pA,stdvec,type="l",lwd=4,xlab=xlabin,ylab = "StdDev of Number of Points",  main= "Plot of Standard Deviation of NST",col="blue")
 }
+
+
+###Mean and Std Devs of Game Tennis System and Best-of-(2L+1)-Points
+###
+Mean_Std_Game_Systems <- function(pvec=seq(.01,.99,.01),Lvec=c(3,4,5))
+{
+	len = length(pvec)
+	Mean_Game = rep(0,len)
+	Std_Game = rep(0,len)
+	lenLvec = length(Lvec)
+	Mean_BofK = matrix(0,len,lenLvec)
+	Std_BofK = matrix(0,len,lenLvec)
+	
+	for(i in 1:len) {
+		out = Game_Mean_Std(p = pvec[i])
+		Mean_Game[i] = out$mean_val
+		Std_Game[i] = out$std_val
+		
+		for(j in 1:lenLvec) {
+			out = Best_of_K_Mean_Std(p = pvec[i],L=Lvec[j])
+			Mean_BofK[i,j] = out$mean_val
+			Std_BofK[i,j] = out$std_val
+		}
+	}
+	
+	Means = cbind(Mean_Game,Mean_BofK)
+	Stds = cbind(Std_Game,Std_BofK)
+	
+	close.screen(all.screens=T)
+
+ymax= max(Means)
+
+matplot(pvec,Means,ylim=c(0,ymax),type="l",col=c("red","blue","green","orange"),lwd=6,lty=1:4,xlab="p",ylab="Mean",main="Mean of Number of Points in Game Systems")
+	legend("bottom",legend=c("Tennis Game System","Best-of-7","Best-of-9","Best-of_11"),col=c("red","blue","green","orange"),lwd=6,lty=1:4)
+
+
+	
+	scan()
+	
+	matplot(pvec,Stds,type="l",col=c("red","blue","green","orange"),lwd=6,lty=1:4,xlab="p",ylab="Standard Deviation",main="Std Dev of Number of Points in Game Systems")
+	legend("bottom",legend=c("Tennis Game System","Best-of-7","Best-of-9","Best-of_11"),col=c("red","blue","green","orange"),lwd=6,lty=1:4)
+
+	
+	return(list(pvec=pvec,Means=Means,Stds=Stds))
+	
+}
+
+Game_Mean_Std <- function(p=.5)
+{
+	out = Game_Statistics(p)
+	mean_val = out$MeanPts[5]
+	vari_val = out$Sigma2Pts[5]
+	std_val = out$SigmaPts
+	return(list(mean_val=mean_val,vari_val=vari_val,std_val=std_val))
+}
+
+###PMF, Mean, Variance and STD of Number of Points in a Best-of-(2L+1) System
+###
+Best_of_K_Mean_Std <- function(p,L=3)
+{
+	q = 1 - p
+	n = (L+1):(2*L+1)
+	probs = choose(n-1,L)*(p^(L+1)*q^(n-L-1) + q^(L+1)*p^(n-L-1))
+	mean_val = sum(n*probs)
+	vari_val = sum(n^2*probs) - mean_val^2
+	std_val = sqrt(vari_val)
+	
+	plot(n,probs,type="h",lwd=3,xlim=c(0,9),xlab="Number of Points (n)",ylab="Probability",
+	     main=paste("PMF of the Number of Points in a Best-of-",2*L+1," System"))
+	
+	return(list(mean_val=mean_val,vari_val=vari_val,std_val=std_val))
+}
+
+
+####Plot Mean and Std for Game
+####
+Plot_Game_Mean_Std <- function(pvec = seq(.01,.99,.01),lwdval=4)
+{
+	len = length(pvec)
+	meanvec = rep(0,len)
+	stdvec = rep(0,len)
+	
+	out = Exact_Game(pvec)
+	meanvec= out$meangame
+	stdvec = out$stdgame
+	
+	close.screen(all.screens=T)
+
+	plot(pvec,meanvec, type="l",lwd=lwdval,xlab="p",ylab="Mean",main="Number of Points in Game")
+	
+	scan()
+	plot(pvec,stdvec, type="l",lwd=lwdval,xlab="p",ylab="Standard Deviation",main="Number of Points in Game")
+
+}
+
+####Effect of K in Set-Tiebreaker
+####
+Effect_K_ST <- function(Kseq=seq(3,21,1),pA=.6,pB=.55)
+{
+  probAwin = NULL
+  for(K in Kseq) {
+    val = Theta_ST(pA,pB,K)
+    probAwin = c(probAwin,val)
+  }
+  return(probAwin)
+}
+
+####Plot of Effect of K in Set-Tiebreaker
+####
+Plot_Effect_K_ST <- function(Kseq=seq(3,21,1),pAseq=c(.6,.55,.45,.45),pBseq=c(.55,.65,.55,.40),lwdval=6,startcol=100)
+{
+  mat_probs = NULL
+  leg=NULL
+  lenP = length(pAseq)
+  mycol=colors()[startcol:(startcol+lenP-1)]
+  
+  for(l in 1:lenP) {
+    pA=pAseq[l]; pB=pBseq[l]
+    valvec=Effect_K_ST(Kseq,pA=pA,pB=pB)
+    mat_probs= cbind(mat_probs,valvec)
+    leg=c(leg,paste("pA=",pA,"; pB=",pB))
+  }
+  
+  matplot(Kseq,mat_probs,type="l",lwd=lwdval,lty=1:lenP,col=mycol,xlab="K",ylab="Prob A Winning",main="Effect of K in Set-Tiebreaker")
+  
+  abline(h=.5,col="gray")
+  legend("right",legend=leg,lwd=lwdval,col=mycol,lty=1:lenP)
+  return(list(Kseq=Kseq,pAseq=pAseq,pBseq=pBseq,mat_probs=mat_probs))
+}
+
+
+
+####Programs to Simulate a Tennis Match
+
+####Game Tie-Breaker and Game
+
+SimTwoPointsSame <- function (p=.5)
+{
+	x = rbinom(2,1,p)
+	t = sum(x)
+	if(t==2) {
+		winServer=1
+		finish="TRUE"
+	}
+	else if (t==0) {
+		winServer=0
+		finish="TRUE"
+	}
+	else {
+		winServer=.5
+		finish="FALSE"	
+	}
+	return(list(finish=finish,winServer=winServer))
+}
+
+SimGameTieBreaker <- function(p=.5)
+{
+	numpts = 0
+	go = "TRUE"
+	while(go) {
+		out = SimTwoPointsSame(p)
+		numpts=numpts+2
+		if(out$finish) {
+			winServer = out$winServer
+			go = "FALSE"
+		}
+	}
+	return(list(numpts=numpts,winServer=winServer))
+}
+
+####Simulates a Game TieBreaker
+SimulateGameTieBreaker <- function(p, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	
+	for(m in 1:mreps) {
+		out = SimGameTieBreaker(p)
+		numptsvec[m] = out$numpts
+		winServervec[m] = out$winServer
+	}
+	
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_winServer = sum(winServervec)/mreps
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in GT")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2)),
+	paste("prop_winServer=",round(prop_winServer,4))))
+		
+	return(list(p=p,mreps=mreps,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts))
+}
+
+simGame <- function(p=.5)
+{
+	go = "TRUE"
+	numpts = 0
+	numwins_Server = 0
+	numwins_Receiver = 0
+	tiebreak = 0
+	
+	while(go) {
+		x = rbinom(1,1,p)
+		numpts = numpts + 1
+		numwins_Server = numwins_Server + x
+		numwins_Receiver = numwins_Receiver + (1-x)
+		if((numwins_Server==3) && (numwins_Receiver==3)) {
+			tiebreak = 1
+			out = SimGameTieBreaker(p)
+			numpts = numpts + out$numpts
+			winServer = out$winServer
+			go = "FALSE"
+		}
+		else if((numwins_Server==4) && (numwins_Receiver < 3)) {
+			winServer = 1
+			go = "FALSE"
+		}
+		else if((numwins_Server < 3) && (numwins_Receiver==4)) {
+			winServer=0
+			go = "FALSE"
+		}
+	}
+	return(list(p=p,numpts=numpts,numwins_Server=numwins_Server,numwins_Receiver=numwins_Receiver,tiebreak=tiebreak,winServer=winServer))
+}
+
+###Simulates a Game
+SimulateGame <- function(p, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+	tiebreakvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	winServer_on_tiebreak = 0
+	scoremat = matrix(0,5,5)
+	
+	for(m in 1:mreps) {
+		out = simGame(p)
+		numptsvec[m] = out$numpts
+		tiebreakvec[m] = out$tiebreak
+		winServervec[m] = out$winServer
+		winServer_on_tiebreak = winServer_on_tiebreak + (out$tiebreak)*(out$winServer)
+		scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] = scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] + 1
+	}
+	
+	num_tiebreak = sum(tiebreakvec)
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_tiebreak = num_tiebreak/mreps
+	prop_winServer = sum(winServervec)/mreps
+	prop_winServer_on_tiebreak = winServer_on_tiebreak/num_tiebreak
+	prop_scoremat = scoremat/mreps
+	score_profile = NULL
+	for(b in 0:2) {
+		score_profile = rbind(score_profile,c(4,b,prop_scoremat[(4+1),(b+1)]))
+	}
+	for(a in 0:2) {
+		score_profile = rbind(score_profile,c(a,4,prop_scoremat[(a+1),(4+1)]))
+	}
+	score_profile = rbind(score_profile,c(3,3,prop_scoremat[(3+1),(3+1)]))
+	score_profile = data.frame(score_profile)
+	colnames(score_profile) = c("Ascore","Bscore","Proportion")
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in GT")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2)),
+	paste("prop_tiebreak=",round(prop_tiebreak,2)),
+	paste("prop_winServer=",round(prop_winServer,4))))
+		
+	return(list(p=p,mreps=mreps,num_tiebreak=num_tiebreak,prop_tiebreak=prop_tiebreak,prop_winServer_on_tiebreak=prop_winServer_on_tiebreak,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts,score_profile=score_profile))
+}
+
+
+####Set
+
+SimTwoPointsDifferent <- function (pA=.5,pB=.5)
+{
+	x=rbinom(1,1,pA)
+	y=rbinom(1,1,pB)
+	t = x + (1-y)
+	if(t==2) {
+		winServer=1
+		finish="TRUE"
+	}
+	else if (t==0) {
+		winServer=0
+		finish="TRUE"
+	}
+	else {
+		winServer=.5
+		finish="FALSE"	
+	}
+	return(list(finish=finish,winServer=winServer))
+}
+
+SimSetSTT <- function(pA=.5,pB=.5)
+{
+	numpts = 0
+	go = "TRUE"
+	while(go) { ###A serves first
+		out1 = SimTwoPointsDifferent(pA,pB)
+		numpts=numpts+2
+		if(out1$finish) {
+			winServer = out1$winServer
+			go = "FALSE"
+		}
+		else { ###B serves first
+			out2 = SimTwoPointsDifferent(pB,pA)
+			numpts=numpts+2
+			if(out2$finish) {
+			winServer = 1 - out2$winServer
+			go = "FALSE"
+			}}
+		}
+	return(list(numpts=numpts,winServer=winServer))
+}
+
+####Simulates a Game TieBreaker
+SimulateSetSTT <- function(pA=.5,pB=.5, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	
+	for(m in 1:mreps) {
+		out = SimSetSTT(pA,pB)
+		numptsvec[m] = out$numpts
+		winServervec[m] = out$winServer
+	}
+	
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_winServer = sum(winServervec)/mreps
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in STT")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2)),
+	paste("prop_winServer=",round(prop_winServer,4))))
+		
+	return(list(pA=pA,pB=pB,mreps=mreps,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts))
+}
+
+SimSetST <- function(pA=.5,pB=.5,K=7)
+{
+	numpts = 0
+	go = "TRUE"
+	numpts = 0
+	numwins_Server = 0
+	numwins_Receiver = 0
+	tiebreak = 0
+	k = 0
+	
+	while(go) {
+		k = k + 1 ####serve number
+		whoS = whoServesST(k)
+		numpts = numpts + 1
+		
+		if(whoS) {
+		x = rbinom(1,1,pA)		
+		numwins_Server = numwins_Server + x
+		numwins_Receiver = numwins_Receiver + (1-x)
+		}
+		else {
+			y = rbinom(1,1,pB)
+			numwins_Server = numwins_Server + (1-y)
+			numwins_Receiver = numwins_Receiver + y
+			}
+			
+		if((numwins_Server==(K-1)) && (numwins_Receiver==(K-1))) {
+			tiebreak = 1
+			nextServe = whoServesST(2*(K-1)+1) ###who will serve first in the STT
+			if(nextServe) {
+			out = SimSetSTT(pA,pB)
+			numpts = numpts + out$numpts
+			winServer = out$winServer
+			}
+			else {
+				out = SimSetSTT(pB,pA)
+				numpts = numpts + out$numpts
+				winServer = 1 - out$winServer
+			}
+			go = "FALSE"
+		}
+		else if((numwins_Server==K) && (numwins_Receiver < (K-1))) {
+			winServer = 1
+			go = "FALSE"
+		}
+		else if((numwins_Server < (K-1)) && (numwins_Receiver==K)) {
+			winServer=0
+			go = "FALSE"
+		}
+	}
+	return(list(pA=pA,pB=pB,numpts=numpts,numwins_Server=numwins_Server,numwins_Receiver=numwins_Receiver,tiebreak=tiebreak,winServer=winServer))
+}
+
+###Simulating a Set Tiebreaker
+SimulateSetST <- function(pA=.5, pB=.5, K=7, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+	tiebreakvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	winServer_on_tiebreak = 0
+	scoremat = matrix(0,K+1,K+1)
+	
+	for(m in 1:mreps) {
+		out = SimSetST(pA,pB,K)
+		numptsvec[m] = out$numpts
+		tiebreakvec[m] = out$tiebreak
+		winServervec[m] = out$winServer
+		winServer_on_tiebreak = winServer_on_tiebreak + (out$tiebreak)*(out$winServer)
+		scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] = scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] + 1
+	}
+	
+	num_tiebreak = sum(tiebreakvec)
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_tiebreak = num_tiebreak/mreps
+	prop_winServer = sum(winServervec)/mreps
+	prop_winServer_on_tiebreak = winServer_on_tiebreak/num_tiebreak
+	prop_scoremat = scoremat/mreps
+	score_profile = NULL
+	for(b in 0:(K-2)) {
+		score_profile = rbind(score_profile,c(K,b,prop_scoremat[(K+1),(b+1)]))
+	}
+	for(a in 0:(K-2)) {
+		score_profile = rbind(score_profile,c(a,K,prop_scoremat[(a+1),(K+1)]))
+	}
+	score_profile = rbind(score_profile,c(K-1,K-1,prop_scoremat[K,K]))
+	score_profile = data.frame(score_profile)
+	colnames(score_profile) = c("Ascore","Bscore","Proportion")
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in SetST")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2)),
+	paste("prop_tiebreak=",round(prop_tiebreak,2)),
+	paste("prop_winServer=",round(prop_winServer,4))))
+		
+	return(list(pA=pA,pB=pB,mreps=mreps,num_tiebreak=num_tiebreak,prop_tiebreak=prop_tiebreak,prop_winServer_on_tiebreak=prop_winServer_on_tiebreak,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts,score_profile=score_profile))
+}
+
+
+####Playing a Set
+SimSet <- function(pA=.5,pB=.5,K=7)
+{
+	numpts = 0
+	go = "TRUE"
+	numpts = 0
+	numwins_Server = 0
+	numwins_Receiver = 0
+	tiebreak = 0
+	k = 0
+	
+	while(go) {
+		k = k + 1 ####serve number
+		whoS = whoServesS(k)
+		
+		if(whoS) {
+		out = simGame(pA)
+		x = out$winServer		
+		numwins_Server = numwins_Server + x
+		numwins_Receiver = numwins_Receiver + (1-x)
+		numpts = numpts + out$numpts
+		}
+		else {
+			out = simGame(pB)
+			y = out$winServer
+			numwins_Server = numwins_Server + (1-y)
+			numwins_Receiver = numwins_Receiver + y
+			numpts = numpts + out$numpts
+			}
+			
+		if((numwins_Server==6) && (numwins_Receiver==6)) {
+			tiebreak = 1
+			nextServe = whoServesS(2*6+1) ###who will serve first in the ST
+			if(nextServe) {
+			out = SimSetST(pA,pB,K)
+			numpts = numpts + out$numpts
+			winServer = out$winServer
+			}
+			else {
+				out = SimSetST(pB,pA)
+				numpts = numpts + out$numpts
+				winServer = 1 - out$winServer
+			}
+			go = "FALSE"
+		}
+		else if((numwins_Server==6) && (numwins_Receiver < 5)) {
+			winServer = 1
+			go = "FALSE"
+		}
+		else if((numwins_Server < 5) && (numwins_Receiver==6)) {
+			winServer=0
+			go = "FALSE"
+		}
+		else if((numwins_Server==7) && (numwins_Receiver==5)) {
+			winServer = 1
+			go = "FALSE"
+		}
+		else if((numwins_Server==5) && (numwins_Receiver==7)) {
+			winServer=0
+			go = "FALSE"
+		}
+		
+	}
+	return(list(pA=pA,pB=pB,numpts=numpts,numwins_Server=numwins_Server,numwins_Receiver=numwins_Receiver,tiebreak=tiebreak,winServer=winServer))
+}
+
+###Simulating a Set
+SimulateSet <- function(pA=.5, pB=.5, K=7, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+	tiebreakvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	winServer_on_tiebreak = 0
+	scoremat = matrix(0,8,8)
+	
+	for(m in 1:mreps) {
+		out = SimSet(pA,pB,K)
+		numptsvec[m] = out$numpts
+		tiebreakvec[m] = out$tiebreak
+		winServervec[m] = out$winServer
+		winServer_on_tiebreak = winServer_on_tiebreak + (out$tiebreak)*(out$winServer)
+		scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] = scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] + 1
+	}
+	
+	num_tiebreak = sum(tiebreakvec)
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_tiebreak = num_tiebreak/mreps
+	prop_winServer = sum(winServervec)/mreps
+	prop_winServer_on_tiebreak = winServer_on_tiebreak/num_tiebreak
+	prop_scoremat = scoremat/mreps
+	score_profile = NULL
+	for(b in 0:4) {
+		score_profile = rbind(score_profile,c(6,b,prop_scoremat[7,(b+1)]))
+	}
+	score_profile = rbind(score_profile,c(7,5,prop_scoremat[8,6]))
+
+	for(a in 0:4) {
+		score_profile = rbind(score_profile,c(a,6,prop_scoremat[(a+1),7]))
+	}
+	score_profile = rbind(score_profile,c(5,7,prop_scoremat[6,8]))
+	
+	score_profile = rbind(score_profile,c(6,6,prop_scoremat[7,7]))
+	
+	score_profile = data.frame(score_profile)
+	colnames(score_profile) = c("Ascore","Bscore","Proportion")
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in Set")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2)),
+	paste("prop_tiebreak=",round(prop_tiebreak,2)),
+	paste("prop_winServer=",round(prop_winServer,4))))
+		
+	return(list(pA=pA,pB=pB,mreps=mreps,num_tiebreak=num_tiebreak,prop_tiebreak=prop_tiebreak,prop_winServer_on_tiebreak=prop_winServer_on_tiebreak,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts,score_profile=score_profile))
+}
+
+###Playing a Match
+SimMatch <- function(pA=.5,pB=.5,K0=7,K1=10,Q=2)
+{
+	numpts = 0
+	go = "TRUE"
+	numpts = 0
+	numwins_Server = 0
+	numwins_Receiver = 0
+	tiebreak = 0
+	s = 0
+	
+	while(go) {
+		s = s + 1 ####set number
+		whoS = whoServesS(s)
+		
+		if(s == 2*Q+1) {K = K1}
+		else {K = K0}
+		
+		if(whoS) {
+		out = SimSet(pA,pB,K)
+		x = out$winServer		
+		numwins_Server = numwins_Server + x
+		numwins_Receiver = numwins_Receiver + (1-x)
+		numpts = numpts + out$numpts
+		}
+		else {
+			out = SimSet(pB,pA,K)
+			y = out$winServer
+			numwins_Server = numwins_Server + (1-y)
+			numwins_Receiver = numwins_Receiver + y
+			numpts = numpts + out$numpts
+			}
+			
+		if((numwins_Server==Q+1)) {
+			winServer = 1
+			go = "FALSE"
+		}
+		else if((numwins_Receiver == Q+1)) {
+			winServer = 0
+			go = "FALSE"
+		}
+		
+	}
+	return(list(pA=pA,pB=pB,K0=K0,K1=K1,Q=Q,numpts=numpts,numwins_Server=numwins_Server,numwins_Receiver=numwins_Receiver,tiebreak=tiebreak,winServer=winServer))
+}
+
+###Simulating a Match
+SimulateMatch <- function(pA=.5, pB=.5, K0=7, K1=10, Q=2, mreps=2000)
+{
+	numptsvec = rep(0,mreps)
+#	tiebreakvec = rep(0,mreps)
+	winServervec = rep(0,mreps)
+	winServer_on_tiebreak = 0
+	scoremat = matrix(0,Q+2,Q+2)
+	
+	for(m in 1:mreps) {
+		out = SimMatch(pA,pB,K0,K1,Q)
+		numptsvec[m] = out$numpts
+		winServervec[m] = out$winServer
+		scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] = scoremat[(out$numwins_Server+1),(out$numwins_Receiver+1)] + 1
+	}
+	
+
+	mean_numpts = mean(numptsvec)
+	var_numpts = var(numptsvec)
+	sd_numpts = sqrt(var_numpts)
+	prop_winServer = sum(winServervec)/mreps
+	prop_scoremat = scoremat/mreps
+	score_profile = NULL
+	for(b in 0:(Q+1)) {
+		score_profile = rbind(score_profile,c(Q+1,b,prop_scoremat[Q+2,(b+1)]))
+	}
+
+	for(a in 0:(Q+1)) {
+		score_profile = rbind(score_profile,c(a,Q+1,prop_scoremat[(a+1),Q+2]))
+	}
+	
+	score_profile = data.frame(score_profile)
+	colnames(score_profile) = c("Ascore","Bscore","Proportion")
+
+	hist(numptsvec,col="blue",main="Histogram of Number of Points in Match")
+	legend("topright",legend=c(paste("mean_numpts=",round(mean_numpts,2)),
+	paste("var_numpts=",round(var_numpts,2)),paste("sd_numpts=",round(sd_numpts,2))))
+		
+	return(list(pA=pA,pB=pB,K0=K0,K1=K1,Q=Q,mreps=mreps,prop_winServer=prop_winServer,mean_numpts=mean_numpts,var_numpts=var_numpts,sd_numpts=sd_numpts,score_profile=score_profile))
+}
+
